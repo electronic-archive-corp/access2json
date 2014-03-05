@@ -1,0 +1,21 @@
+{
+  "query": "select * from map",
+  "template":
+  {
+    "id": "{{id}}",
+    "x": "{{x}}",
+	"y": "{{y}}",
+	"dolg": "{{shir}}",
+	"shir": "{{dolg}}",
+    "joint": 
+    {
+      "query": "select * from parents where id={{id}}",
+      "template":
+      {
+		 "parent": "{{parent_id}}",
+		 "id": "{{id}}"
+      }
+    },
+    "other": "asdasd"
+  }
+}
