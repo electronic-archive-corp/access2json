@@ -49,5 +49,5 @@ access2json
 ------------
 
 Первый вариант для оконного, второй для консольного запуска
-wscript app
-cscript app
+- wscript app.js
+- cscript /NoLogo app.js
