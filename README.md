@@ -52,20 +52,20 @@ access2json
 
 /NoLogo указывается чтобы вывод в консоль был без WScript заголовка.
 
-- wscript app.js
-- cscript /NoLogo app.js
+- wscript access2json.js
+- cscript /NoLogo access2json.js
 
 Параметры:
 
-- cscript /NoLogo app.js [fullDBPath] [fullConfigPath]
+- cscript /NoLogo access2json.js [fullDBPath] [fullConfigPath]
 	+ порядок параметров **важен**
 	+ по умолчанию ищется файл mdb.mdb в папке рядом с app.js
 	+ по умолчанию ищется файл config.json в папке рядом с app.js
 
 Примеры:
 
-- cscript /NoLogo app.js "c:\Мои базы\данные.mdb"
-- cscript /NoLogo app.js "c:\Мои базы\данные.mdb" "c:\Конфиги\книги.json"
+- cscript /NoLogo access2json.js "c:\Мои базы\данные.mdb"
+- cscript /NoLogo access2json.js "c:\Мои базы\данные.mdb" "c:\Конфиги\книги.json"
 
 Требования
 ---------
@@ -73,7 +73,7 @@ access2json
 - кодировка конфиг файла должна быть ANSI (иначе русский язык потеряется)
 - Если планируется вывод в файл, то используйте флаг **/u** иначе будут проблемы с русским
 
-    cscript /nologo /u app.js >> result.json
+    cscript /nologo /u access2json.js >> result.json
 
 
 
