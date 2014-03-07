@@ -1,21 +1,44 @@
 {
-  "query": "select * from map",
+  "query": "select * from main where entity='Документ Оперативный'",
   "template":
   {
     "id": "{{id}}",
-    "x": "{{x}}",
-	"y": "{{y}}",
-	"dolg": "{{shir}}",
-	"shir": "{{dolg}}",
-    "joint": 
+	"fond": "{{f11}}",
+	"opis": "{{f12}}",
+	"delo": "{{f13}}",
+	"date_from_to": "{{f15}}",
+	"archive": "{{f34}}",
+	"authors": "{{f19}}",
+	"document_name": "{{f18}}",
+	"geo_names": "{{f31}}",
+	"map_image": "{{FilePath}}",
+	
+    "geo_labels": 
     {
-      "query": "select * from parents where id={{id}}",
+      "query": "select * from MAP where Parent_id={{id}}",
       "template":
       {
-		 "parent": "{{parent_id}}",
-		 "id": "{{id}}"
+		"id": "{{id}}",
+		"x": "{{x}}",
+		"y": "{{y}}",
+		"dolgota": "{{dolg}}",
+		"shirota": "{{shir}}"
       }
     },
-    "other": "asdasd"
+    "army_unit_labels": 
+    {
+      "query": "select * from RKKA where Parent_id={{id}}",
+      "template":
+      {
+		"id": "{{id}}",
+		"x": "{{x}}",
+		"y": "{{y}}",
+		"dolgota": "{{dolg}}",
+		"shirota": "{{shir}}",
+		"army_unit_name": "{{podr}}", 
+		"army_unit_date_from": "1943.09.19",
+		"army_unit_date_to": "1943.09.27"
+      }
+	}
   }
 }

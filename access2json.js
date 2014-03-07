@@ -43,27 +43,43 @@
 	}
 })(WScript);
 
-
 var Fs = new ActiveXObject("Scripting.FileSystemObject");
 var WshShell = WScript.CreateObject ("WScript.Shell");
-function alert(str){
-	WScript.Echo(str);
+
+var OutFile = null;
+
+function log(str){
+	var t;
+	if(typeof(str) == 'undefined'){
+		t = 'undefined';
+	}else if(str === null){
+		t = 'null';
+	}else{
+		t = str;
+	}
+	if(OutFile){
+		OutFile.Write(t); 
+	}else{
+		WScript.StdOut.Write(t);
+	}
 }
 
-//alert(arch);
+function Quit(code){
+	if(OutFile){
+		OutFile.Close();
+	}
+}
 
-// this one is directory of process
-//alert (WshShell.CurrentDirectory);
-
-//find current directory of this file
+// WshShell.CurrentDirectory is directory of process
+// not directory of this file
 var objFile = Fs.GetFile(WScript.ScriptFullName);
 var Folder = Fs.GetParentFolderName(objFile) + "\\";
-//alert("Using folder: " + Folder);
+//log("Using folder: " + Folder);
 
 var jsonFile = Folder + "json2.js";
 if (!Fs.FileExists(jsonFile)){
 	WScript.Echo("json2.js file not found");
-	WScript.Quit(1);
+	Quit(1);
 }
 
 var JSON = {};
@@ -71,131 +87,153 @@ eval(Fs.OpenTextFile(jsonFile, 1).ReadAll());
 
 if(typeof(JSON) == 'undefined' || typeof(JSON.stringify) == 'undefined'){
 	WScript.Echo("JSON object is not valid");
-	WScript.Quit(1);
+	Quit(1);
 }
 
 var dbPath = Folder + "mdb.mdb";
 var confPath = Folder + "config.json";
 
 var objArgs = WScript.Arguments;
-//alert("Args " + objArgs.length);
+/*
+log("Args " + objArgs.length);
 for(a in objArgs){
-	alert(a + ": " + objArgs[a]);
+	log(a + ": " + objArgs[a]);
 }
-if(objArgs.length >= 1)
-{
-   dbPath = objArgs[0];
-   alert("using dbPath: " + dbPath);
+*/
+
+if(objArgs.length >= 1){
+	if(objArgs[0] != 'null'){
+		dbPath = objArgs[0];
+		log("using dbPath: " + dbPath);
+	}
 }
 
-if(objArgs.length > 1)
-{
-   confPath = objArgs[1];
+if(objArgs.length > 1){
+	if(objArgs[1] != 'null'){
+		confPath = objArgs[1];
+	}
+}
+
+if(objArgs.length > 2){
+	var f = Folder + "result.json";
+	if(objArgs[2] == 'null'){
+		f = objArgs[2];
+	}
+	OutFile = Fs.CreateTextFile(f, 8, true); //append
 }
 
 if (!Fs.FileExists(dbPath)){
 	WScript.Echo("Database file " + dbPath + " not found");
-	WScript.Quit(1);
+	Quit(1);
 }
 	
 if (!Fs.FileExists(confPath)){
 	WScript.Echo("Config file " + confPath + " not found");
-	WScript.Quit(1);
+	Quit(1);
 }
 
 var confContent = Fs.OpenTextFile(confPath, 1).ReadAll();
 var Config = null;
 eval("Config = " + confContent);
 if(typeof(Config) == 'undefined' || Config == null){
-	alert("Config is not valid");
-	WScript.Quit(1);
+	log("Config is not valid");
+	Quit(1);
 }
 
-function template2string(t, data){
+function template2string(t, data, forQuery){
+	function __jsonOrNot(t){
+		if(forQuery)
+			return t;
+		return JSON.stringify(t);
+	}
 	if(typeof(t) != 'string'){
-		alert(t);
 		return t;
 	}
 	var start = t.indexOf("{{");
 	if(start < 0)
-		return t;
+		return __jsonOrNot(t);
 	start = start + 2;
 	var end = t.indexOf("}}", start);
 	if(end < 0)
-		return t;
+		return __jsonOrNot(t);
 	end = end + 2;
 	//ok, we have variable
-	t = t.substr(0, start - 2) + data[t.substr(start, end - start - 2)] + t.substr(end);
-	return template2string(t, data);
+	var left = t.substr(0, start - 2);
+	var right = t.substr(end);
+	t =  data[t.substr(start, end - start - 2)];
+	if (typeof(t) == "string") {
+		t = t.replace(/\"/g, '&#34;');
+		t = t.replace(/\'/g, '&#39;');
+	}else if (typeof(t) == "date") {
+		//t = "new Date(\"" + t + "\")";
+	}else if (typeof(t) == "number") {
+	}else{
+		//debug ?
+	}
+	if(left.length == 0 && right.length == 0){
+		return __jsonOrNot(t);
+	}
+	t = left + t + right;
+	return __jsonOrNot(template2string(t, data, true));
 }
 
-function construct(data, config){
-	var SQL = template2string(config.query, data);
-	var context = query(SQL);
-	
-	var result = [];
-	for(var c in context){
-		if (!context.hasOwnProperty(c))
-			continue;
+function construct(config, data){
+	var SQL = template2string(config.query, data, true);
+	var rs = new ActiveXObject("ADODB.Recordset");
+	var adOpenDynamic = 2;
+	var adLockOptimistic = 3;
+	rs.open(SQL, conn, adOpenDynamic, adLockOptimistic);
+	log("[");
+	if (rs.Fields.Count) {
+		if (!rs.bof && !rs.eof){
+			rs.MoveFirst();
+			var first = true;
+			while (!rs.eof){
+				if(!first){
+					log(",");
+				}
 
-		var obj = {};
-		var ci = context[c];
-		var t = [];
-		for(var i in config.template){
-			if (!config.template.hasOwnProperty(i))
-				continue;
-	
-			var field = config.template[i];
-			if(typeof(field) == 'object'){
-				obj[i] = construct(ci, field);
-			}else{
-				obj[i] = template2string(field, ci);
+				var dbRow = {};
+				for (var x = 0; x < rs.Fields.Count; x++){
+					dbRow[rs.Fields(x).Name] = rs.Fields(x).Value;
+				}
+				log('{');
+				var firstProp = true;
+				for(var i in config.template){
+					if (!config.template.hasOwnProperty(i))
+						continue;
+					if(!firstProp)
+						log(",");
+					log('"' + i + '":')
+					var field = config.template[i];
+					if(typeof(field) == 'object'){
+						construct(field, dbRow);
+					}else{
+						var val = template2string(field, dbRow, false);
+						log(val);
+					}
+					firstProp = false;
+				}
+				log('}');
+				first = false;
+				rs.MoveNext();
 			}
 		}
-		result.push(obj);
 	}
-	return result;
+	log("]");
+	rs.close();
 }
 
 var conn = null; // Connection to database
 
-function query(q){
-	try{
-		var rs = new ActiveXObject("ADODB.Recordset");
-		var adOpenDynamic = 2;
-		var adLockOptimistic = 3;
-		rs.open(q, conn, adOpenDynamic, adLockOptimistic);
-		if (rs.Fields.Count) {
-			if (!rs.bof && !rs.eof){
-				var r = [];
-				rs.MoveFirst();
-				while (!rs.eof){
-					var obj = {};
-					for (var x = 0; x < rs.Fields.Count; x++){
-						obj[rs.Fields(x).Name] = rs.Fields(x).Value;
-					}
-					rs.MoveNext();
-					r.push(obj);
-				}
-				return r;
-			}
-		}
-		rs.close();
-	}catch (e){
-		alert("Query " + e.name + "\n\n" + e.description);
-	}
-	return false;
-}
-
 try{
-	//Connection string
 	var cs = "Provider = Microsoft.Jet.OLEDB.4.0; Data Source = " + dbPath + ";Jet OLEDB:Engine Type=4;Persist Security Info = false"
-	//Microsoft.ACE.OLEDB.12.0
 	conn = new ActiveXObject("ADODB.Connection");
 	conn.open(cs, "", ""); // connection string, user, pass
-	var r = construct({}, Config);
-	alert(JSON.stringify(r));
+	construct(Config, {});
 	conn.close();
 }catch (e){
-	alert(e.name + "\n\n" + e.description);
+	log(e.name + "\n\n" + e.description);
+	Quit(2);
 }
+Quit(0);
