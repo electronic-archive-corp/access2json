@@ -5,7 +5,7 @@
 
 
 (function() {
-  var A2JsonReader, Access2json, Fs, a2js, dbReaderFile, programFile, _ref,
+  var A2BsonReader, Access2bson, Fs, a2js, dbReaderFile, programFile, _ref,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -34,24 +34,21 @@
   /*
       ОК. Базовые классы теперь доступны.
   
-      A2JsonReader складывает данные в массив - для обьектов первого уровня конфига
-      Используйте pretty опцию конструктора для форматирования с использованием сдвига(для удобства отладки)
+      A2BsonReader складывает данные в одну строчку на обьект для обьектов первого уровня конфига
+      Разделение между обьектами - новая строка
   */
 
 
-  A2JsonReader = (function(_super) {
-    __extends(A2JsonReader, _super);
+  A2BsonReader = (function(_super) {
+    __extends(A2BsonReader, _super);
 
-    A2JsonReader.OutFile = null;
+    A2BsonReader.OutFile = null;
 
-    A2JsonReader.pretty = true;
-
-    function A2JsonReader(out, pretty) {
+    function A2BsonReader(out, p) {
       this.OutFile = out;
-      this.pretty = pretty;
     }
 
-    A2JsonReader.prototype.log = function(str) {
+    A2BsonReader.prototype.log = function(str) {
       var t;
       t = void 0;
       if (typeof str === "undefined") {
@@ -68,98 +65,66 @@
       }
     };
 
-    A2JsonReader.prototype.process = function(state, level, data) {
-      var addIndent, self;
-      if (this.pretty) {
-        self = this;
-        addIndent = function(nl) {
-          var i;
-          i = nl || level;
-          while (i > 0) {
-            self.log("\t");
-            i--;
-          }
-        };
-      } else {
-        addIndent = function() {
-          return {};
-        };
-      }
+    A2BsonReader.prototype.process = function(state, level, data) {
       switch (state) {
         case this.ADBR_ARRAY_START:
-          addIndent();
-          this.log("[");
-          if (this.pretty) {
-            return this.log("\n");
+          if (level !== 0) {
+            return this.log("[");
           }
           break;
         case this.ADBR_ARRAY_END:
-          if (this.pretty) {
-            this.log("\n");
-          }
-          addIndent();
-          return this.log("]");
-        case this.ADBR_OBJ_START:
-          addIndent();
-          this.log("{");
-          if (this.pretty) {
-            return this.log("\n");
+          if (level !== 0) {
+            return this.log("]");
           }
           break;
+        case this.ADBR_OBJ_START:
+          return this.log("{");
         case this.ADBR_OBJ_END:
-          if (this.pretty) {
-            this.log("\n");
-          }
-          addIndent();
           return this.log("}");
         case this.ADBR_NEXT_OBJ:
-        case this.ADBR_NEXT_PROP:
           this.log(",");
-          if (this.pretty) {
+          if (level === 1) {
             return this.log("\n");
           }
           break;
+        case this.ADBR_NEXT_PROP:
+          return this.log(",");
         case this.ADBR_PROP_NAME:
-          addIndent(level + 1);
           return this.log('"' + data + '":');
         case this.ADBR_PROP_VALUE:
           return this.log(JSON.stringify(data));
-        case this.ADBR_BEFORE_CHILD:
-          if (this.pretty) {
-            return this.log("\n");
-          }
       }
     };
 
-    return A2JsonReader;
+    return A2BsonReader;
 
   })(AccessDbReader);
 
   /*
       Используем общую часть (инициализацию описанную в классе Program )
       Готовим новый файл (затираем существующий) в который будем складывать результат
-      Используем A2JsonReader для представления данных
+      Используем A2BsonReader для представления данных
   */
 
 
-  Access2json = (function(_super) {
-    __extends(Access2json, _super);
+  Access2bson = (function(_super) {
+    __extends(Access2bson, _super);
 
-    function Access2json() {
-      _ref = Access2json.__super__.constructor.apply(this, arguments);
+    function Access2bson() {
+      _ref = Access2bson.__super__.constructor.apply(this, arguments);
       return _ref;
     }
 
-    Access2json.prototype.prepareOutFile = function() {
+    Access2bson.prototype.prepareOutFile = function() {
       var f;
-      f = this.Folder + "a2json_result.json";
+      f = this.Folder + "a2bson_result.json";
       return this.OutFile = Fs.CreateTextFile(f, 8, true);
     };
 
-    Access2json.prototype.run = function() {
+    Access2bson.prototype.run = function() {
       var e, r;
       try {
-        r = new A2JsonReader(this.OutFile, true);
+        r = new A2BsonReader(this.OutFile);
         return r.read(this.dbPath, this.Config);
       } catch (_error) {
         e = _error;
@@ -168,16 +133,16 @@
       }
     };
 
-    return Access2json;
+    return Access2bson;
 
   })(Program);
 
-  a2js = new Access2json();
+  a2js = new Access2bson();
 
   a2js.run();
 
 }).call(this);
 
 /*
-//@ sourceMappingURL=access2json.map
+//@ sourceMappingURL=access2bson.map
 */
