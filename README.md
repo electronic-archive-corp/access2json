@@ -1,14 +1,15 @@
 access2json
 ===========
 
-Преобразователь mdb файлов в json по правилам описанным в структуре
+Преобразователь mdb файлов в json или bson по правилам описанным в структуре (конфиге)
 
 Требования:
 ----------
 
 - wscript (встроен в Windows)
+- кодировка конфиг файла должна быть ANSI (иначе русский язык потеряется)
 
-Конфиг файл должен находится в одной папке с app.js и представляет из себя json файл со структурой:
+Конфиг файл должен находится в одной папке с access2json.js и представляет из себя json файл со структурой:
 
     {
       query: "select ...",
@@ -55,6 +56,12 @@ access2json
 - wscript access2json.js
 - cscript /NoLogo access2json.js
 
+На выходе будет файл a2json_result.json в той же папке, что и access2json.js
+
+Если требуется вывод в формате BSON - используйте:
+
+- cscript /NoLogo access2bson.js
+
 Параметры:
 
 - cscript /NoLogo access2json.js [fullDBPath] [fullConfigPath]
@@ -67,13 +74,8 @@ access2json
 - cscript /NoLogo access2json.js "c:\Мои базы\данные.mdb"
 - cscript /NoLogo access2json.js "c:\Мои базы\данные.mdb" "c:\Конфиги\книги.json"
 
-Требования
----------
 
-- кодировка конфиг файла должна быть ANSI (иначе русский язык потеряется)
-- Если планируется вывод в файл, то используйте флаг **/u** иначе будут проблемы с русским
 
-    cscript /nologo /u access2json.js >> result.json
 
 
 
